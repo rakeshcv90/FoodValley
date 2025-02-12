@@ -1,13 +1,144 @@
-# Resolve react_native_pods.rb with node to allow for hoisting
-require Pod::Executable.execute_command('node', ['-p',
-  'require.resolve(
-    "react-native/scripts/react_native_pods.rb",
-    {paths: [process.argv[1]]},
-  )', __dir__]).strip
+#require File.join(File.dirname(`node --print "require.resolve('expo/package.json')"`), "scripts/autolinking")
+## Resolve react_native_pods.rb with node to allow for hoisting
+##require Pod::Executable.execute_command('node', ['-p',
+##  'require.resolve(
+##    "react-native/scripts/react_native_pods.rb",
+##    {paths: [process.argv[1]]},
+##  )', __dir__]).strip
+#
+# def node_require(script)
+#  # Resolve script with node to allow for hoisting
+#   require Pod::Executable.execute_command('node', ['-p',
+#     "require.resolve(
+#       '#{script}',
+#       {paths: [process.argv[1]]},
+#     )", __dir__]).strip
+# end
+#
+#
+#node_require('react-native/scripts/react_native_pods.rb')
+#node_require('react-native-permissions/scripts/setup.rb')
+#
+#platform :ios,'15.1'
+#prepare_react_native_project!
+#setup_permissions([
+#  'AppTrackingTransparency',
+#  'Bluetooth',
+#  'Calendars',
+#  'CalendarsWriteOnly',
+#   'Camera',
+#  'Contacts',
+#  'FaceID',
+#  'LocationAccuracy',
+#  'LocationAlways',
+#  'LocationWhenInUse',
+#  'MediaLibrary',
+#  'Microphone',
+#  'Motion',
+#  'Notifications',
+#  'PhotoLibrary',
+#  'PhotoLibraryAddOnly',
+#  'Reminders',
+#  'Siri',
+#  'SpeechRecognition',
+#  'StoreKit',
+#])
+#
+#
+#linkage = ENV['USE_FRAMEWORKS']
+#if linkage != nil
+#  Pod::UI.puts "Configuring Pod with #{linkage}ally linked Frameworks".green
+#  use_frameworks! :linkage => linkage.to_sym
+#end
+#
+#target 'FoodValley' do
+#  use_expo_modules!
+#
+#  if ENV['EXPO_USE_COMMUNITY_AUTOLINKING'] == '1'
+#    config_command = ['node', '-e', "process.argv=['', '', 'config'];require('@react-native-community/cli').run()"];
+#  else
+#    config_command = [
+#      'node',
+#      '--no-warnings',
+#      '--eval',
+#      'require(require.resolve(\'expo-modules-autolinking\', { paths: [require.resolve(\'expo/package.json\')] }))(process.argv.slice(1))',
+#      'react-native-config',
+#      '--json',
+#      '--platform',
+#      'ios'
+#    ]
+#  end
+#  # React Native Maps dependencies
+#
+#  rn_maps_path = '../node_modules/react-native-maps'
+#  pod 'react-native-google-maps', :path => rn_maps_path
+#  config = use_native_modules!(config_command)
+#
+#  use_react_native!(
+#    :path => config[:reactNativePath],
+#    # An absolute path to your application root.
+#    :app_path => "#{Pod::Config.instance.installation_root}/.."
+#  )
+#
+#  target 'FoodValleyTests' do
+#    inherit! :complete
+#    # Pods for testing
+#  end
+#
+#  post_install do |installer|
+#    # https://github.com/facebook/react-native/blob/main/packages/react-native/scripts/react_native_pods.rb#L197-L202
+#    react_native_post_install(
+#      installer,
+#      config[:reactNativePath],
+#      :mac_catalyst_enabled => false,
+#      # :ccache_enabled => true
+#    )
+#  end
+#end
+# Import necessary scripts
+require File.join(File.dirname(`node --print "require.resolve('expo/package.json')"`), "scripts/autolinking")
 
-platform :ios, min_ios_version_supported
+# Dynamic require to resolve paths
+def node_require(script)
+  require Pod::Executable.execute_command('node', ['-p',
+    "require.resolve(
+      '#{script}',
+      {paths: [process.argv[1]]},
+    )", __dir__]).strip
+end
+
+node_require('react-native/scripts/react_native_pods.rb')
+node_require('react-native-permissions/scripts/setup.rb')
+
+# Define platform
+platform :ios, '15.1'
+
+# Prepare React Native project and setup permissions
 prepare_react_native_project!
+setup_permissions([
+  'AppTrackingTransparency',
+  'Bluetooth',
+  'Calendars',
+  'CalendarsWriteOnly',
+  'Camera',
+  'Contacts',
+  'FaceID',
+  'LocationAccuracy',
+  'LocationAlways',
+  'LocationWhenInUse',
+  'MediaLibrary',
+  'Microphone',
+  'Motion',
+  'Notifications',
+  'PhotoLibrary',
+  'PhotoLibraryAddOnly',
+  'Reminders',
+  'Siri',
+  'SpeechRecognition',
+  'StoreKit',
+])
 
+# Frameworks linkage configuration
 linkage = ENV['USE_FRAMEWORKS']
 if linkage != nil
   Pod::UI.puts "Configuring Pod with #{linkage}ally linked Frameworks".green
@@ -15,26 +146,53 @@ if linkage != nil
 end
 
 target 'FoodValley' do
-  config = use_native_modules!
+  use_expo_modules! # Setup expo modules
+
+  # Autolinking configuration for react-native
+  if ENV['EXPO_USE_COMMUNITY_AUTOLINKING'] == '1'
+    config_command = [
+      'node',
+      '-e',
+      "process.argv=['', '', 'config'];require('@react-native-community/cli').run()"
+    ]
+  else
+    config_command = [
+      'node',
+      '--no-warnings',
+      '--eval',
+      'require(require.resolve(\'expo-modules-autolinking\', { paths: [require.resolve(\'expo/package.json\')] }))(process.argv.slice(1))',
+      'react-native-config',
+      '--json',
+      '--platform',
+      'ios'
+    ]
+  end
+
+  # Include react-native-maps with Google Maps support
+  rn_maps_path = '../node_modules/react-native-maps'
+  pod 'react-native-google-maps', :path => rn_maps_path
+
+  # Use React Native dependencies
+  config = use_native_modules!(config_command)
 
   use_react_native!(
     :path => config[:reactNativePath],
-    # An absolute path to your application root.
+    # Absolute path to your application root
     :app_path => "#{Pod::Config.instance.installation_root}/.."
   )
 
+  # Tests target
   target 'FoodValleyTests' do
     inherit! :complete
-    # Pods for testing
   end
 
+  # Post-install configurations
   post_install do |installer|
-    # https://github.com/facebook/react-native/blob/main/packages/react-native/scripts/react_native_pods.rb#L197-L202
+    # React Native post-install setup
     react_native_post_install(
       installer,
       config[:reactNativePath],
       :mac_catalyst_enabled => false,
-      # :ccache_enabled => true
     )
   end
 end
